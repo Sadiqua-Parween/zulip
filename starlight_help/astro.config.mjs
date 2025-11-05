@@ -48,17 +48,27 @@ function createRedirectPlugin() {
                             req.url = "/help";
                         }
 
-                        // Help center dev server always runs on a port different than
+                        // Help center dev server often runs on a port different than
                         // the web app. We have relative URLs pointing to the web app
                         // in the help center, but they are not on the port help center
                         // is running on. We redirect here to our web app proxy port.
-                        if (req.url && !req.url.startsWith("/help")) {
+                        // We skip redirect for non-document requests since astro assets
+                        // don't have the /help prefix.
+                        if (
+                            req.url &&
+                            !req.url.startsWith("/help") &&
+                            req.headers.accept?.includes("text/html")
+                        ) {
                             const host = req.headers.host || "localhost";
                             const redirectUrl = new URL(req.url, `http://${host}`);
-                            redirectUrl.port = proxyPort;
-                            res.writeHead(302, {Location: redirectUrl.toString()});
-                            res.end();
-                            return;
+                            // We run help center on the proxy port in case of
+                            // run-dev being run with `--only-help-center` flag.
+                            if (redirectUrl.port !== proxyPort) {
+                                redirectUrl.port = proxyPort;
+                                res.writeHead(302, {Location: redirectUrl.toString()});
+                                res.end();
+                                return;
+                            }
                         }
 
                         next();
@@ -198,6 +208,7 @@ export default defineConfig({
                             link: "/zulip-cloud-or-self-hosting",
                         },
                         "moving-to-zulip",
+                        "moving-from-slack",
                         "moderating-open-organizations",
                         "setting-up-zulip-for-a-class",
                         "using-zulip-for-a-class",
@@ -231,7 +242,10 @@ export default defineConfig({
                         "create-channels",
                         "customize-settings-for-new-users",
                         "invite-users-to-join",
-                        "set-up-integrations",
+                        {
+                            label: "Set up integrations",
+                            link: "/integrations-overview",
+                        },
                     ],
                 },
                 {
@@ -749,5 +763,6 @@ export default defineConfig({
         "disable-message-edit-history": "/help/restrict-message-edit-history-access",
         "edit-a-bot": "/help/manage-a-bot",
         "reading-dms": "/help/direct-messages",
+        "set-up-integrations": "/help/integrations-overview",
     },
 });

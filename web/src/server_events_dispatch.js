@@ -409,7 +409,7 @@ export function dispatch_normal_event(event) {
                                 ) {
                                     settings_org.check_disable_direct_message_initiator_group_widget();
                                     compose_closed_ui.maybe_update_buttons_for_dm_recipient();
-                                    compose_recipient.check_posting_policy_for_compose_box();
+                                    compose_validate.validate_and_update_send_button_status();
                                 }
 
                                 if (
@@ -757,6 +757,9 @@ export function dispatch_normal_event(event) {
                         unread_ops.process_read_messages_event(message_ids);
                         message_events.remove_messages(message_ids);
                         stream_topic_history.remove_history_for_stream(stream_id);
+                        user_group_edit.update_group_permissions_panel_on_losing_stream_access(
+                            stream_id,
+                        );
                     }
                     stream_list.update_subscribe_to_more_streams_link();
                     break;

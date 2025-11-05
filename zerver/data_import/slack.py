@@ -1667,7 +1667,19 @@ def do_convert_zipfile(
         rm_tree(slack_data_dir)
 
 
-SLACK_IMPORT_TOKEN_SCOPES = {"emoji:read", "users:read", "users:read.email", "team:read"}
+SLACK_IMPORT_TOKEN_SCOPES = {
+    # For Slack's emoji.list endpoint: https://docs.slack.dev/reference/methods/emoji.list/
+    "emoji:read",
+    # For Slack's team.info endpoint: https://docs.slack.dev/reference/methods/team.info/
+    "team:read",
+    # Required by the following endpoints:
+    # - bots.info: https://docs.slack.dev/reference/methods/bots.info/
+    # - users.info: https://docs.slack.dev/reference/methods/users.info/
+    # - users.list: https://docs.slack.dev/reference/methods/users.list/
+    "users:read",
+    # For Slack's users.info endpoint: https://docs.slack.dev/reference/methods/users.info/
+    "users:read.email",
+}
 
 
 def do_convert_directory(
@@ -1677,7 +1689,7 @@ def do_convert_directory(
     threads: int = 6,
     convert_slack_threads: bool = False,
 ) -> None:
-    check_token_access(token, SLACK_IMPORT_TOKEN_SCOPES)
+    check_slack_token_access(token, SLACK_IMPORT_TOKEN_SCOPES)
 
     os.makedirs(output_dir, exist_ok=True)
     if os.listdir(output_dir):
@@ -1778,9 +1790,11 @@ def get_data_file(path: str) -> Any:
         return data
 
 
-def check_token_access(token: str, required_scopes: set[str]) -> None:
+def check_slack_token_access(token: str, required_scopes: set[str]) -> None:
     if token.startswith("xoxp-"):
         logging.info("This is a Slack user token, which grants all rights the user has!")
+    elif not required_scopes:
+        raise ValueError("required_scopes shouldn't be empty!")
     elif token.startswith("xoxb-"):
         data = requests.get(
             "https://slack.com/api/api.test", headers={"Authorization": f"Bearer {token}"}

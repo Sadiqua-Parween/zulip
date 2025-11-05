@@ -1032,16 +1032,29 @@ def get_message_payload(
             data["channel_id"] = channel_id
 
         data["topic"] = get_topic_display_name(message.topic_name(), user_profile.default_language)
-    elif message.recipient.type == Recipient.DIRECT_MESSAGE_GROUP:
-        data["recipient_type"] = "private" if for_legacy_clients else "direct"
-        # For group DMs, we need to fetch the users for the pm_users field.
-        # Note that this doesn't do a separate database query, because both
-        # functions use the get_display_recipient_by_id cache.
-        recipients = get_display_recipient(message.recipient)
-        if len(recipients) > 2:
-            data["pm_users"] = direct_message_group_users(message.recipient.id)
-    else:  # Recipient.PERSONAL
-        data["recipient_type"] = "private" if for_legacy_clients else "direct"
+    else:
+        assert message.recipient.type in [Recipient.PERSONAL, Recipient.DIRECT_MESSAGE_GROUP]
+        if for_legacy_clients:
+            data["recipient_type"] = "private"
+            if message.recipient.type == Recipient.DIRECT_MESSAGE_GROUP:
+                # For group DMs, we need to fetch the users for the pm_users field.
+                # Note that this doesn't do a separate database query, because both
+                # functions use the get_display_recipient_by_id cache.
+                recipients = get_display_recipient(message.recipient)
+                if len(recipients) > 2:
+                    data["pm_users"] = direct_message_group_users(message.recipient.id)
+        else:
+            data["recipient_type"] = "direct"
+            # For 1:1 and group DMs, we need to fetch the users for the `recipient_user_ids`
+            # field. Note that this doesn't do a separate database query, because it uses
+            # the `get_display_recipient_by_id` cache.
+            display_recipients = get_display_recipient(message.recipient)
+            recipient_user_ids = {
+                display_recipient["id"] for display_recipient in display_recipients
+            }
+            if len(recipient_user_ids) == 1:  # Recipient.PERSONAL
+                recipient_user_ids.add(message.sender_id)
+            data["recipient_user_ids"] = sorted(recipient_user_ids)
 
     return data
 
@@ -1370,14 +1383,15 @@ def send_push_notifications_legacy(
     # While sending push notifications for new messages to older clients
     # (which don't support E2EE), if `require_e2ee_push_notifications`
     # realm setting is set to `true`, we redact the content.
-    if gcm_payload.get("event") != "remove" and user_profile.realm.require_e2ee_push_notifications:
+    if user_profile.realm.require_e2ee_push_notifications:
         # Make deep copies so redaction doesn't affect the original dicts
-        apns_payload = copy.deepcopy(apns_payload)
-        gcm_payload = copy.deepcopy(gcm_payload)
-
         placeholder_content = _("New message")
-        apns_payload["alert"]["body"] = placeholder_content
-        gcm_payload["content"] = placeholder_content
+        if gcm_payload and gcm_payload.get("event") != "remove":
+            gcm_payload = copy.deepcopy(gcm_payload)
+            gcm_payload["content"] = placeholder_content
+        if apns_payload and apns_payload["custom"]["zulip"].get("event") != "remove":
+            apns_payload = copy.deepcopy(apns_payload)
+            apns_payload["alert"]["body"] = placeholder_content
 
     if uses_notification_bouncer():
         send_notifications_to_bouncer(
@@ -1433,6 +1447,9 @@ APNsPriority: TypeAlias = Literal[10, 5, 1]
 
 @dataclass
 class PushRequestBasePayload:
+    # FCM expects in this type must always be strings. Non-string
+    # fields must be converted into strings in the FCM code path
+    # within send_e2ee_push_notifications.
     push_account_id: int
     encrypted_data: str
 
