@@ -207,11 +207,19 @@ export default defineConfig({
                             label: "Zulip Cloud or self-hosting?",
                             link: "/zulip-cloud-or-self-hosting",
                         },
-                        "moving-to-zulip",
-                        "moving-from-slack",
                         "moderating-open-organizations",
                         "setting-up-zulip-for-a-class",
                         "using-zulip-for-a-class",
+                    ],
+                },
+                {
+                    label: "Guides for moving from another app",
+                    items: [
+                        "migrating-from-other-chat-tools",
+                        "moving-to-zulip",
+                        "moving-from-slack",
+                        "moving-from-teams",
+                        "moving-from-discord",
                     ],
                 },
                 {
@@ -235,7 +243,6 @@ export default defineConfig({
                 {
                     label: "Setting up your organization",
                     items: [
-                        "migrating-from-other-chat-tools",
                         "create-your-organization-profile",
                         "create-user-groups",
                         "customize-organization-settings",
@@ -389,6 +396,7 @@ export default defineConfig({
                         },
                         "view-a-messages-edit-history",
                         "collapse-a-message",
+                        "report-a-message",
                         "read-receipts",
                     ],
                 },
@@ -623,6 +631,7 @@ export default defineConfig({
                         "image-video-and-website-previews",
                         "hide-message-content-in-emails",
                         "message-retention-policy",
+                        "enable-moderation-requests",
                         "digest-emails",
                         "disable-welcome-emails",
                         "configure-a-custom-welcome-message",

@@ -31,6 +31,9 @@ const {electron_bridge} = mock_esm("../src/electron_bridge", {
 const theme = mock_esm("../src/theme");
 const emoji_picker = mock_esm("../src/emoji_picker");
 const gear_menu = mock_esm("../src/gear_menu");
+mock_esm("../src/inbox_ui", {
+    complete_rerender: noop,
+});
 const information_density = mock_esm("../src/information_density");
 const linkifiers = mock_esm("../src/linkifiers");
 const compose_recipient = mock_esm("../src/compose_recipient");
@@ -701,6 +704,12 @@ run_test("realm settings", ({override, override_rewire}) => {
     event = event_fixtures.realm__update__disallow_disposable_email_addresses;
     test_realm_boolean(event, "realm_disallow_disposable_email_addresses");
 
+    event = event_fixtures.realm__update__moderation_request_channel_id;
+    dispatch(event);
+    assert_same(realm.realm_moderation_request_channel_id, 43);
+    // make sure to reset for future tests
+    override(realm, "realm_moderation_request_channel_id", -1);
+
     event = event_fixtures.realm__update__new_stream_announcements_stream_id;
     dispatch(event);
     assert_same(realm.realm_new_stream_announcements_stream_id, 42);
@@ -1335,6 +1344,10 @@ run_test("user_settings", ({override}) => {
     override(user_settings, "starred_message_counts", false);
     dispatch(event);
     assert_same(user_settings.starred_message_counts, true);
+
+    event = event_fixtures.user_settings__web_inbox_show_channel_folders;
+    dispatch(event);
+    assert_same(user_settings.web_inbox_show_channel_folders, false);
 
     event = event_fixtures.user_settings__web_left_sidebar_show_channel_folders;
     override(stream_list, "build_stream_list", noop);

@@ -310,6 +310,7 @@ export function dispatch_normal_event(event) {
                 message_content_edit_limit_seconds: noop,
                 message_content_delete_limit_seconds: noop,
                 message_edit_history_visibility_policy: noop,
+                moderation_request_channel_id: noop,
                 move_messages_between_streams_limit_seconds: noop,
                 move_messages_within_stream_limit_seconds: message_edit.update_inline_topic_edit_ui,
                 message_retention_days: noop,
@@ -742,6 +743,9 @@ export function dispatch_normal_event(event) {
                         }
                         settings_streams.update_default_streams_table();
                         stream_data.remove_default_stream(stream_id);
+                        if (realm.realm_moderation_request_channel_id === stream_id) {
+                            settings_org.sync_realm_settings("moderation_request_channel_id");
+                        }
                         if (realm.realm_new_stream_announcements_stream_id === stream_id) {
                             settings_org.sync_realm_settings("new_stream_announcements_stream_id");
                         }
@@ -942,6 +946,7 @@ export function dispatch_normal_event(event) {
                 "web_suggest_update_timezone",
                 "web_left_sidebar_unreads_count_summary",
                 "web_left_sidebar_show_channel_folders",
+                "web_inbox_show_channel_folders",
             ];
 
             const original_home_view = user_settings.web_home_view;
@@ -1031,6 +1036,9 @@ export function dispatch_normal_event(event) {
             }
             if (event.property === "web_left_sidebar_show_channel_folders") {
                 stream_list.build_stream_list(true);
+            }
+            if (event.property === "web_inbox_show_channel_folders") {
+                inbox_ui.complete_rerender();
             }
             if (
                 event.property === "receives_typing_notifications" &&
